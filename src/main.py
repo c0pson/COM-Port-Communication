@@ -170,6 +170,40 @@ class App(ctk.CTk):
             state="readonly"
         ).pack(padx=7, pady=(0,7), fill="x")
 
+        ctk.CTkLabel(
+            master=frame,
+            text="Terminator",
+            font=self.font_18
+        ).pack(anchor="w", padx=7)
+        self.terminator_var = ctk.StringVar(value="None")
+        terminator_menu = ctk.CTkComboBox(
+            master=frame,
+            variable=self.terminator_var,
+            values=["None", "CR", "LF", "CR-LF", "Custom"],
+            font=self.font_21,
+            state="readonly",
+            command=self.on_terminator_change
+        )
+        terminator_menu.pack(padx=7, pady=(0,7), fill="x")
+
+        def validate_terminator(new_value):
+            return len(new_value) <= 2
+
+        vcmd_term = self.register(validate_terminator)
+        self.custom_terminator_frame = ctk.CTkFrame(frame)
+        ctk.CTkLabel(
+            master=self.custom_terminator_frame,
+            text="Custom terminator",
+            font=self.font_18
+        ).pack(anchor="w", padx=7)
+        self.custom_terminator_var = ctk.StringVar(value="")
+        ctk.CTkEntry(
+            master=self.custom_terminator_frame,
+            textvariable=self.custom_terminator_var,
+            validate="key",
+            validatecommand=(vcmd_term, "%P")
+        ).pack(padx=7, pady=(0,7), fill="x")
+
         return frame
 
     def check_connection(self):
@@ -178,6 +212,26 @@ class App(ctk.CTk):
             self.create_notification("No port selected")
             return False
         return True, port
+
+    def on_terminator_change(self, value: str):
+        if self.terminator_var.get() == "Custom":
+            self.custom_terminator_frame.pack(padx=7, pady=(0,7), fill="x")
+        else:
+            self.custom_terminator_frame.pack_forget()
+
+    def get_terminator(self) -> str:
+        terminator_type = self.terminator_var.get()
+        if terminator_type == "None":
+            return ""
+        elif terminator_type == "CR":
+            return "\r"
+        elif terminator_type == "LF":
+            return "\n"
+        elif terminator_type == "CR-LF":
+            return "\r\n"
+        elif terminator_type == "Custom":
+            return self.custom_terminator_var.get()
+        return ""
 
     def connect(self) -> None:
         if not (connection := self.check_connection()):
@@ -212,7 +266,8 @@ class App(ctk.CTk):
             self.create_notification("No connection")
             return
         message = self.text_input.get("1.0", "end-1c")
-        if self.com.write(message):
+        terminator = self.get_terminator()
+        if self.com.write(message + terminator):
             self.create_notification("Write Successful")
         else:
             self.create_notification("Writing Failure")
