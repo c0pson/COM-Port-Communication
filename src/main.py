@@ -276,7 +276,10 @@ class App(ctk.CTk):
         if not self.check_connection():
             self.create_notification("No connection")
             return
-        if self.com.read():
+        if read_val := self.com.read():
+            self.text_intake.configure(state="normal")
+            self.text_intake.insert("end", read_val.decode('utf-8'))
+            self.text_intake.configure(state="disabled")
             self.create_notification("Read Successful")
         else:
             self.create_notification("Reading Failure")
