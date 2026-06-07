@@ -15,7 +15,10 @@ class App(ctk.CTk):
         self.font_18 = ctk.CTkFont("Ubuntu Mono", 18)
         self.com = COM()
         self.all_devices = self.com.get_all_devices()
+        self.continuous_mode: bool = False
         self.setup()
+        self.geometry("1060x620")
+        self.title("COM Port Communication")
         self.protocol("WM_DELETE_WINDOW", self.on_close)
         self.notifications: list[Notification] = []
 
@@ -30,33 +33,57 @@ class App(ctk.CTk):
 
     def write_frame(self) -> ctk.CTkFrame:
         frame = ctk.CTkFrame(self)
+        bottom_frame = ctk.CTkFrame(frame)
+        bottom_frame.pack(side=ctk.BOTTOM, fill=ctk.X, pady=2, padx=2)
         self.text_input = ctk.CTkTextbox(
             master=frame,
             font=self.font_18
         )
         self.text_input.pack(side=ctk.TOP, padx=0, pady=0, expand=True, fill=ctk.BOTH)
         ctk.CTkButton(
-            master=frame,
+            master=bottom_frame,
             font=self.font_21,
             text="Write",
             command=self.write
-        ).pack(side=ctk.BOTTOM, padx=5, pady=2, anchor=ctk.CENTER)
+        ).pack(side=ctk.LEFT, padx=5, pady=2, anchor=ctk.CENTER, expand=True)
+        ctk.CTkButton(
+            master=bottom_frame,
+            font=self.font_21,
+            text="Clear",
+            command=self.clear
+        ).pack(side=ctk.LEFT, padx=5, pady=2, anchor=ctk.CENTER, expand=True)
         return frame
 
     def read_frame(self) -> ctk.CTkFrame:
         frame = ctk.CTkFrame(self)
+        bottom_frame = ctk.CTkFrame(frame)
+        bottom_frame.pack(side=ctk.BOTTOM, fill=ctk.X, pady=2, padx=2)
         self.text_intake = ctk.CTkTextbox(
             master=frame,
             state="disabled",
             font=self.font_18
         )
-        ctk.CTkButton(
-            master=frame,
+        self.read_button = ctk.CTkButton(
+            master=bottom_frame,
             font=self.font_21,
             text="Read",
             command=self.read
-        ).pack(side=ctk.BOTTOM, padx=5, pady=2, anchor=ctk.CENTER)
+        )
+        self.continuous_mode_check_button = ctk.CTkCheckBox(
+            master=bottom_frame,
+            font=self.font_21,
+            text="Continuous mode",
+            command=self.toggle_continuous_mode
+        )
+        self.continuous_mode_check_button.pack(side=ctk.LEFT, padx=5, pady=2, anchor=ctk.CENTER, expand=True)
+        self.read_button.pack(side=ctk.LEFT, padx=5, pady=2, anchor=ctk.CENTER)
         self.text_intake.pack(side=ctk.TOP, padx=0, pady=0, expand=True, fill=ctk.BOTH)
+        ctk.CTkButton(
+            master=bottom_frame,
+            font=self.font_21,
+            text="Clear",
+            command=self.clear
+        ).pack(side=ctk.LEFT, padx=5, pady=2, anchor=ctk.CENTER, expand=True)
         return frame
 
     def top_frame(self) -> ctk.CTkFrame:
@@ -272,13 +299,43 @@ class App(ctk.CTk):
         else:
             self.create_notification("Writing Failure")
 
+    def clear(self) -> None:
+        self.text_input.delete("1.0", ctk.END)
+
+    def toggle_continuous_mode(self):
+        if not self.com.conn_port or not self.com.conn_port.is_open:
+            self.create_notification("No connection")
+            self.continuous_mode_check_button.deselect()
+            return
+        if not self.continuous_mode:
+            self.read_button.configure(state="disabled")
+            self.continuous_mode = True
+            self.start_continuous_mode()
+        else:
+            self.read_button.configure(state="normal")
+            self.continuous_mode = False
+
+    def start_continuous_mode(self):
+        if self.continuous_mode:
+            try:
+                self.just_read()
+            except Exception as e:
+                print(e)
+            self.after(21, self.start_continuous_mode)
+
+    def just_read(self):
+        if read_val := self.com.read():
+            self.text_intake.configure(state="normal")
+            self.text_intake.insert(ctk.END, read_val.decode('utf-8'))
+            self.text_intake.configure(state="disabled")
+
     def read(self):
         if not self.check_connection():
             self.create_notification("No connection")
             return
         if read_val := self.com.read():
             self.text_intake.configure(state="normal")
-            self.text_intake.insert("end", read_val.decode('utf-8'))
+            self.text_intake.insert(ctk.END, read_val.decode('utf-8'))
             self.text_intake.configure(state="disabled")
             self.create_notification("Read Successful")
         else:
