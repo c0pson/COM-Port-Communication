@@ -1,11 +1,18 @@
 import serial.tools.list_ports # type: ignore
 
 from dataclasses import dataclass
+from enum import IntEnum
+
+import time
 
 @dataclass
 class COMPort:
     name: str
     port: str
+
+class ERROR(IntEnum):
+    NO_CONNECTION = -1
+    CONNECTION_FAILURE = -2
 
 class COM:
     def __init__(self):
@@ -66,3 +73,29 @@ class COM:
         if x := self.conn_port.read(self.conn_port.in_waiting):
             return x
         return False
+
+    def ping(self):
+        if not self.conn_port or not self.conn_port.is_open:
+            return ERROR.NO_CONNECTION
+        start = time.perf_counter()
+        self.conn_port.write(b"PING\n")
+        response = self.conn_port.readline()
+        end = time.perf_counter()
+        if response == b"PONG\n":
+            ping_ms = (end - start) * 1000
+            print(f"Ping: {ping_ms:.3f} ms")
+            return ping_ms
+        else:
+            return ERROR.CONNECTION_FAILURE
+
+    def return_ping(self):
+        if not self.conn_port or not self.conn_port.is_open:
+            return ERROR.NO_CONNECTION
+        while True:
+            start = time.perf_counter()
+            message = self.conn_port.readline()
+            end = time.perf_counter()
+            if message == b"PING\n":
+                self.conn_port.write(b"PONG\n")
+                ping_ms = (end - start) * 1000
+                return ping_ms

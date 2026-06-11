@@ -1,9 +1,10 @@
 import customtkinter as ctk # type: ignore
 
+import threading
 import re
 
-from notification import Notification
-from serial_com import COM
+from notification import Notification, MESSAGE
+from serial_com import COM, ERROR
 
 class App(ctk.CTk):
     def __init__(self) -> None:
@@ -16,6 +17,8 @@ class App(ctk.CTk):
         self.com = COM()
         self.all_devices = self.com.get_all_devices()
         self.continuous_mode: bool = False
+        self.ping_mode: bool = False
+        self.ping_thread: threading.Thread | None = None
         self.setup()
         self.geometry("1060x620")
         self.title("COM Port Communication")
@@ -40,17 +43,18 @@ class App(ctk.CTk):
             font=self.font_18
         )
         self.text_input.pack(side=ctk.TOP, padx=0, pady=0, expand=True, fill=ctk.BOTH)
-        ctk.CTkButton(
+        self.write_button = ctk.CTkButton(
             master=bottom_frame,
             font=self.font_21,
             text="Write",
             command=self.write
-        ).pack(side=ctk.LEFT, padx=5, pady=2, anchor=ctk.CENTER, expand=True)
+        )
+        self.write_button.pack(side=ctk.LEFT, padx=5, pady=2, anchor=ctk.CENTER, expand=True)
         ctk.CTkButton(
             master=bottom_frame,
             font=self.font_21,
             text="Clear",
-            command=self.clear
+            command=self.clear_input
         ).pack(side=ctk.LEFT, padx=5, pady=2, anchor=ctk.CENTER, expand=True)
         return frame
 
@@ -82,7 +86,7 @@ class App(ctk.CTk):
             master=bottom_frame,
             font=self.font_21,
             text="Clear",
-            command=self.clear
+            command=self.clear_intake
         ).pack(side=ctk.LEFT, padx=5, pady=2, anchor=ctk.CENTER, expand=True)
         return frame
 
@@ -99,7 +103,33 @@ class App(ctk.CTk):
             state="readonly"
         )
         self.ports_menu.pack(side=ctk.LEFT)
-        ctk.CTkButton(frame, text="Connect", command=self.connect, font=self.font_21).pack(side=ctk.RIGHT, padx=7, pady=7)
+        ctk.CTkButton(
+            master=frame,
+            text="Connect",
+            command=self.connect,
+            font=self.font_21
+        ).pack(side=ctk.RIGHT, padx=7, pady=7)
+        self.ping_button = ctk.CTkButton(
+            master=frame,
+            text="Ping",
+            command=self.ping,
+            font=self.font_21
+        )
+        self.ping_button.pack(side=ctk.RIGHT, padx=7, pady=7)
+        self.toggle_ping_button = ctk.CTkCheckBox(
+            master=frame,
+            width=0, # some customtkinter weird behavior while scaling background of the widget 
+            text="Listen mode",
+            font=self.font_21,
+            command=self.toggle_ping_mode,
+        )
+        self.toggle_ping_button.pack(side=ctk.RIGHT)
+        self.ping_measurement_label = ctk.CTkLabel(
+            master=frame,
+            text="Ping: ---ms",
+            font=self.font_21
+        )
+        self.ping_measurement_label.pack(side=ctk.RIGHT, expand=True, padx=10, pady=7)
         return frame
 
     def left_toolbar(self) -> ctk.CTkFrame:
@@ -236,7 +266,7 @@ class App(ctk.CTk):
     def check_connection(self):
         port = next((p for p in self.all_devices if p.name == self.port_var.get()), None)
         if not port:
-            self.create_notification("No port selected")
+            self.create_notification(MESSAGE.NO_CONNECTION)
             return False
         return True, port
 
@@ -286,25 +316,91 @@ class App(ctk.CTk):
         except Exception as e:
             match = re.search(r"'([^']+)'[^']*$", str(e))
             err = match.group(1) if match else "Unknown Error"
-            self.create_notification(err)
+            self.create_notification(MESSAGE.ERROR_UNKNOWN)
+
+    def ping(self):
+        if self.ping_mode:
+            return
+        self.create_notification(MESSAGE.PING_INFO)
+        self.after(3501, self._ping)
+
+    def _ping(self):
+        match self.com.ping():
+            case ERROR.NO_CONNECTION:
+                self.create_notification(MESSAGE.NO_CONNECTION)
+            case ERROR.CONNECTION_FAILURE:
+                self.create_notification(MESSAGE.CONNECTION_ERROR)
+            case _: ...
+
+    def toggle_ping_mode(self):
+        if self.ping_mode:
+            self.ping_mode = False
+            self.ping_button.configure(state="normal")
+            self.write_button.configure(state="normal")
+            self.read_button.configure(state="normal")
+        else:
+            if not self.com.conn_port or not self.com.conn_port.is_open:
+                self.create_notification(MESSAGE.NO_CONNECTION)
+                self.toggle_ping_button.deselect()
+                return
+            self.ping_button.configure(state="disabled")
+            self.write_button.configure(state="disabled")
+            self.read_button.configure(state="disabled")
+            self.ping_mode = True
+            self.ping_thread = threading.Thread(target=self._ping_loop, daemon=True)
+            self.ping_thread.start()
+
+    def _ping_loop(self):
+        while self.ping_mode:
+            try:
+                if not self.com.conn_port or not self.com.conn_port.is_open:
+                    self.after(0, self._stop_ping_mode)
+                    break
+                ping_ms = self.com.return_ping()
+                if ping_ms > 0:
+                    self.after(0, lambda: self._update_ping_label(ping_ms))
+                    self.toggle_ping_button.deselect()
+                else:
+                    self.after(0, self._stop_ping_mode)
+                    break
+            except Exception as e:
+                print(f"Ping error: {e}")
+                self.after(0, self._stop_ping_mode)
+                break
+
+    def _update_ping_label(self, ping_ms: float):
+        self.ping_measurement_label.configure(text=f"Ping: {ping_ms:.3f}ms")
+
+    def _stop_ping_mode(self):
+        self.toggle_ping_button.deselect()
+        self.ping_mode = False
+        self.ping_measurement_label.configure(text="Ping: ---ms")
+        self.ping_button.configure(state="normal")
+        self.write_button.configure(state="normal")
+        self.read_button.configure(state="normal")
 
     def write(self):
         if not self.check_connection():
-            self.create_notification("No connection")
+            self.create_notification(MESSAGE.NO_CONNECTION)
             return
         message = self.text_input.get("1.0", "end-1c")
         terminator = self.get_terminator()
         if self.com.write(message + terminator):
-            self.create_notification("Write Successful")
+            self.create_notification(MESSAGE.WRITE_SUCCESS)
         else:
-            self.create_notification("Writing Failure")
+            self.create_notification(MESSAGE.WRITE_FAIL)
 
-    def clear(self) -> None:
+    def clear_input(self) -> None:
         self.text_input.delete("1.0", ctk.END)
+
+    def clear_intake(self) -> None:
+        self.text_intake.configure(state="normal")
+        self.text_intake.delete("1.0", ctk.END)
+        self.text_intake.configure(state="disabled")
 
     def toggle_continuous_mode(self):
         if not self.com.conn_port or not self.com.conn_port.is_open:
-            self.create_notification("No connection")
+            self.create_notification(MESSAGE.NO_CONNECTION)
             self.continuous_mode_check_button.deselect()
             return
         if not self.continuous_mode:
@@ -331,20 +427,20 @@ class App(ctk.CTk):
 
     def read(self):
         if not self.check_connection():
-            self.create_notification("No connection")
+            self.create_notification(MESSAGE.NO_CONNECTION)
             return
         if read_val := self.com.read():
             self.text_intake.configure(state="normal")
             self.text_intake.insert(ctk.END, read_val.decode('utf-8'))
             self.text_intake.configure(state="disabled")
-            self.create_notification("Read Successful")
+            self.create_notification(MESSAGE.READ_SUCCESS)
         else:
-            self.create_notification("Reading Failure")
+            self.create_notification(MESSAGE.READ_FAIL)
 
     def create_notification(self, message: str):
         if self.notifications:
             self.destroy_notifications()
-        self.notifications.append(Notification(self, message, 3, "bottom_corner"))
+        self.notifications.append(Notification(self, message, 3, "top"))
 
     def destroy_notifications(self):
         for notification in self.notifications:
