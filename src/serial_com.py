@@ -22,7 +22,7 @@ class COM:
         ports: list[COMPort] = []
         all_ports = serial.tools.list_ports.comports()
         for port in all_ports:
-            if port.vid is not None:
+            if port.vid is not None or "Virtual" in port.description:
                 ports.append(COMPort(port.description, port.device))
         return ports
 

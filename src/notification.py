@@ -7,7 +7,8 @@ import pywinstyles # type: ignore
 
 class MESSAGE(StrEnum):
     NO_CONNECTION = "No Connection"
-    CONNECTION_ERROR = "COnnection Error"
+    CONNECTION_ERROR = "Connection Error"
+    CONNECTION_SUCCESS = "Connection Success"
     WRITE_SUCCESS = "Write Successful"
     WRITE_FAIL = "Write Failure"
     READ_SUCCESS = "Read Successful"

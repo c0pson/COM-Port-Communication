@@ -1,31 +1,46 @@
 import customtkinter as ctk # type: ignore
 
 import threading
-import re
 
 from notification import Notification, MESSAGE
 from serial_com import COM, ERROR
+from logger import Logger, LOG_LEVEL
+from tools import resource_path
+from time import time
 
 class App(ctk.CTk):
     def __init__(self) -> None:
         super().__init__()
+        self.setup_logger()
+        self.setup_font()
+        self.setup_COM()
+        self.setup_GUI()
+        self.setup_notifications()
+        self.logger.log(LOG_LEVEL.INFO, "Application initialized successfully")
+
+    def setup_logger(self) -> None:
+        self.logger = Logger("logs", f"{time()}.log", level=LOG_LEVEL.INFO)
+        self.logger.log(LOG_LEVEL.INFO, "Logger initialized")
+
+    def setup_font(self) -> None:
         font = ctk.FontManager()
         font.init_font_manager()
         font.load_font("font\\UbuntuMono-Regular.ttf")
         self.font_21 = ctk.CTkFont("Ubuntu Mono", 21)
         self.font_18 = ctk.CTkFont("Ubuntu Mono", 18)
+
+    def setup_COM(self) -> None:
         self.com = COM()
         self.all_devices = self.com.get_all_devices()
+        self.logger.log(LOG_LEVEL.INFO, f"Detected {len(self.all_devices)} COM device(s)")
+        for device in self.all_devices:
+            self.logger.log(LOG_LEVEL.INFO, f"  - {device.name} ({device.port})")
         self.continuous_mode: bool = False
         self.ping_mode: bool = False
         self.ping_thread: threading.Thread | None = None
-        self.setup()
-        self.geometry("1060x620")
-        self.title("COM Port Communication")
-        self.protocol("WM_DELETE_WINDOW", self.on_close)
-        self.notifications: list[Notification] = []
+        self.last_removed_stop_bit: str | None = None
 
-    def setup(self) -> None:
+    def setup_GUI(self) -> None:
         self.columnconfigure(1, weight=1)
         self.columnconfigure(2, weight=1)
         self.rowconfigure(1, weight=1)
@@ -33,6 +48,13 @@ class App(ctk.CTk):
         self.left_toolbar().grid(row=1, column=0, sticky="nsw", padx=5, pady=5)
         self.write_frame().grid(row=1, column=1, sticky="nsew", padx=5, pady=5)
         self.read_frame().grid(row=1, column=2, sticky="nsew", padx=5, pady=5)
+        self.geometry("1060x620")
+        self.title("COM Port Communication")
+        self.protocol("WM_DELETE_WINDOW", self.on_close)
+
+    def setup_notifications(self) -> None:
+        self.pending_notification: None | str = None
+        self.notifications: list[Notification] = []
 
     def write_frame(self) -> ctk.CTkFrame:
         frame = ctk.CTkFrame(self)
@@ -118,7 +140,7 @@ class App(ctk.CTk):
         self.ping_button.pack(side=ctk.RIGHT, padx=7, pady=7)
         self.toggle_ping_button = ctk.CTkCheckBox(
             master=frame,
-            width=0, # some customtkinter weird behavior while scaling background of the widget 
+            width=0, # some customtkinter weird behavior while calculating size of the background 
             text="Listen mode",
             font=self.font_21,
             command=self.toggle_ping_mode,
@@ -140,7 +162,7 @@ class App(ctk.CTk):
             text="Port settings",
             font=self.font_21
         ).pack(side=ctk.TOP, padx=7, pady=7, anchor=ctk.W)
-
+        # Baudrate settings
         ctk.CTkLabel(
             master=frame,
             text="Baudrate",
@@ -154,7 +176,7 @@ class App(ctk.CTk):
             font=self.font_21,
             state="readonly"
         ).pack(padx=7, pady=(0,7), fill="x")
-
+        # Bytesize settings
         ctk.CTkLabel(
             master=frame,
             text="Bytesize",
@@ -168,7 +190,7 @@ class App(ctk.CTk):
             font=self.font_21,
             state="readonly"
         ).pack(padx=7, pady=(0,7), fill="x")
-
+        # Parity settings
         ctk.CTkLabel(
             master=frame,
             text="Parity",
@@ -182,7 +204,7 @@ class App(ctk.CTk):
             font=self.font_21,
             state="readonly"
         ).pack(padx=7, pady=(0,7), fill="x")
-
+        # Stop bits settings
         ctk.CTkLabel(
             master=frame,
             text="Stop bits",
@@ -194,10 +216,11 @@ class App(ctk.CTk):
             variable=self.stopbits_var,
             values=["1", "2"],
             font=self.font_21,
-            state="readonly"
+            state="readonly",
+            command=self.update_custom_terminator_input
         ).pack(padx=7, pady=(0,7), fill="x")
-
-        def validate_input(new_value):
+        # Timeout settings
+        def validate_timeout_input(new_value):
             return new_value.isdigit() or new_value == ""
         ctk.CTkLabel(
             master=frame,
@@ -205,14 +228,14 @@ class App(ctk.CTk):
             font=self.font_18
         ).pack(anchor="w", padx=7)
         self.timeout_var = ctk.StringVar(value="1")
-        vcmd = self.register(validate_input)
+        vcmd_timeout = self.register(validate_timeout_input)
         ctk.CTkEntry(
             master=frame,
             textvariable=self.timeout_var,
             validate="key",
-            validatecommand=(vcmd, "%P")
+            validatecommand=(vcmd_timeout, "%P")
         ).pack(padx=7, pady=(0,7), fill="x")
-
+        # Flow settings
         ctk.CTkLabel(
             master=frame,
             text="Flow control",
@@ -226,7 +249,12 @@ class App(ctk.CTk):
             font=self.font_21,
             state="readonly"
         ).pack(padx=7, pady=(0,7), fill="x")
-
+        # terminator settings
+        def validate_terminator_input(new_value, keysym):
+            if keysym == "BackSpace":
+                self.last_removed_stop_bit = None
+            return len(new_value) <= int(self.stopbits_var.get())
+        vcmd_terminator = self.register(validate_terminator_input)
         ctk.CTkLabel(
             master=frame,
             text="Terminator",
@@ -242,11 +270,7 @@ class App(ctk.CTk):
             command=self.on_terminator_change
         )
         terminator_menu.pack(padx=7, pady=(0,7), fill="x")
-
-        def validate_terminator(new_value):
-            return len(new_value) <= 2
-
-        vcmd_term = self.register(validate_terminator)
+        # Custom Terminator Input
         self.custom_terminator_frame = ctk.CTkFrame(frame)
         ctk.CTkLabel(
             master=self.custom_terminator_frame,
@@ -254,14 +278,24 @@ class App(ctk.CTk):
             font=self.font_18
         ).pack(anchor="w", padx=7)
         self.custom_terminator_var = ctk.StringVar(value="")
-        ctk.CTkEntry(
+        self.custom_terminator_input = ctk.CTkEntry(
             master=self.custom_terminator_frame,
             textvariable=self.custom_terminator_var,
             validate="key",
-            validatecommand=(vcmd_term, "%P")
-        ).pack(padx=7, pady=(0,7), fill="x")
-
+            validatecommand=(vcmd_terminator, "%P", "%K")
+        )
+        self.custom_terminator_input.pack(padx=7, pady=(0,7), fill="x")
         return frame
+
+    def update_custom_terminator_input(self, value) -> None:
+        curr_len = len(self.custom_terminator_var.get())
+        if curr_len > int(value):
+            current_text = self.custom_terminator_input.get()
+            self.last_removed_stop_bit = current_text[-1]
+            self.custom_terminator_input.delete(len(current_text) - 1, ctk.END)
+        elif curr_len < int(value) and self.last_removed_stop_bit:
+            self.custom_terminator_input.insert(ctk.END, self.last_removed_stop_bit)
+            self.last_removed_stop_bit = None
 
     def check_connection(self):
         port = next((p for p in self.all_devices if p.name == self.port_var.get()), None)
@@ -292,6 +326,7 @@ class App(ctk.CTk):
 
     def connect(self) -> None:
         if not (connection := self.check_connection()):
+            self.logger.log(LOG_LEVEL.WARNING, "Connection attempt failed: no valid port selected")
             return
 
         port = connection[1]
@@ -301,6 +336,7 @@ class App(ctk.CTk):
         dsrdtr = flow_control == "DTR/DSR"
         
         try:
+            self.logger.log(LOG_LEVEL.INFO, f"Attempting connection to {port.name} - Baud: {self.baud_var.get()}, Bytesize: {self.bytesize_var.get()}, Parity: {self.parity_var.get()}, Stopbits: {self.stopbits_var.get()}")
             self.com.connect(
                 port,
                 baudrate=int(self.baud_var.get()),
@@ -312,37 +348,45 @@ class App(ctk.CTk):
                 rtscts=rtscts,
                 dsrdtr=dsrdtr
             )
-            self.create_notification("Connection Successful")
+            self.logger.log(LOG_LEVEL.INFO, f"Successfully connected to {port.name}")
+            self.create_notification(MESSAGE.CONNECTION_SUCCESS)
         except Exception as e:
-            match = re.search(r"'([^']+)'[^']*$", str(e))
-            err = match.group(1) if match else "Unknown Error"
+            self.logger.log(LOG_LEVEL.ERROR, f"Connection error: {str(e)}")
             self.create_notification(MESSAGE.ERROR_UNKNOWN)
+            print(e)
 
     def ping(self):
         if self.ping_mode:
             return
+        self.logger.log(LOG_LEVEL.INFO, "Ping initiated")
         self.create_notification(MESSAGE.PING_INFO)
-        self.after(3501, self._ping)
+        self.pending_notification = self.after(3501, self._ping)
 
     def _ping(self):
         match self.com.ping():
             case ERROR.NO_CONNECTION:
+                self.logger.log(LOG_LEVEL.WARNING, "Ping failed: no connection")
                 self.create_notification(MESSAGE.NO_CONNECTION)
             case ERROR.CONNECTION_FAILURE:
+                self.logger.log(LOG_LEVEL.WARNING, "Ping failed: connection error")
                 self.create_notification(MESSAGE.CONNECTION_ERROR)
-            case _: ...
+            case _: 
+                self.logger.log(LOG_LEVEL.INFO, "Ping successful")
 
     def toggle_ping_mode(self):
         if self.ping_mode:
+            self.logger.log(LOG_LEVEL.INFO, "Listen mode disabled")
             self.ping_mode = False
             self.ping_button.configure(state="normal")
             self.write_button.configure(state="normal")
             self.read_button.configure(state="normal")
         else:
             if not self.com.conn_port or not self.com.conn_port.is_open:
+                self.logger.log(LOG_LEVEL.WARNING, "Listen mode toggle failed: no connection")
                 self.create_notification(MESSAGE.NO_CONNECTION)
                 self.toggle_ping_button.deselect()
                 return
+            self.logger.log(LOG_LEVEL.INFO, "Listen mode enabled")
             self.ping_button.configure(state="disabled")
             self.write_button.configure(state="disabled")
             self.read_button.configure(state="disabled")
@@ -354,22 +398,26 @@ class App(ctk.CTk):
         while self.ping_mode:
             try:
                 if not self.com.conn_port or not self.com.conn_port.is_open:
+                    self.logger.log(LOG_LEVEL.INFO, "Listen mode stopped: connection lost")
                     self.after(0, self._stop_ping_mode)
                     break
                 ping_ms = self.com.return_ping()
                 if ping_ms > 0:
+                    self.logger.log(LOG_LEVEL.INFO, f"Ping response: {ping_ms:.2f}ms")
                     self.after(0, lambda: self._update_ping_label(ping_ms))
                     self.toggle_ping_button.deselect()
                 else:
+                    self.logger.log(LOG_LEVEL.WARNING, "Ping response failed")
                     self.after(0, self._stop_ping_mode)
                     break
             except Exception as e:
+                self.logger.log(LOG_LEVEL.ERROR, f"Ping loop error: {str(e)}")
                 print(f"Ping error: {e}")
                 self.after(0, self._stop_ping_mode)
                 break
 
     def _update_ping_label(self, ping_ms: float):
-        self.ping_measurement_label.configure(text=f"Ping: {ping_ms:.3f}ms")
+        self.ping_measurement_label.configure(text=f"Ping: {ping_ms:.2f}ms")
 
     def _stop_ping_mode(self):
         self.toggle_ping_button.deselect()
@@ -381,13 +429,17 @@ class App(ctk.CTk):
 
     def write(self):
         if not self.check_connection():
+            self.logger.log(LOG_LEVEL.WARNING, "Write attempt failed: no connection")
             self.create_notification(MESSAGE.NO_CONNECTION)
             return
         message = self.text_input.get("1.0", "end-1c")
         terminator = self.get_terminator()
+        self.logger.log(LOG_LEVEL.INFO, f"Writing message: {repr(message + terminator)}")
         if self.com.write(message + terminator):
+            self.logger.log(LOG_LEVEL.INFO, "Write successful")
             self.create_notification(MESSAGE.WRITE_SUCCESS)
         else:
+            self.logger.log(LOG_LEVEL.WARNING, "Write failed")
             self.create_notification(MESSAGE.WRITE_FAIL)
 
     def clear_input(self) -> None:
@@ -400,14 +452,17 @@ class App(ctk.CTk):
 
     def toggle_continuous_mode(self):
         if not self.com.conn_port or not self.com.conn_port.is_open:
+            self.logger.log(LOG_LEVEL.WARNING, "Continuous mode toggle failed: no connection")
             self.create_notification(MESSAGE.NO_CONNECTION)
             self.continuous_mode_check_button.deselect()
             return
         if not self.continuous_mode:
+            self.logger.log(LOG_LEVEL.INFO, "Continuous mode enabled")
             self.read_button.configure(state="disabled")
             self.continuous_mode = True
             self.start_continuous_mode()
         else:
+            self.logger.log(LOG_LEVEL.INFO, "Continuous mode disabled")
             self.read_button.configure(state="normal")
             self.continuous_mode = False
 
@@ -416,30 +471,39 @@ class App(ctk.CTk):
             try:
                 self.just_read()
             except Exception as e:
+                self.logger.log(LOG_LEVEL.ERROR, f"Continuous mode error: {str(e)}")
                 print(e)
             self.after(21, self.start_continuous_mode)
 
     def just_read(self):
         if read_val := self.com.read():
+            self.logger.log(LOG_LEVEL.INFO, f"Continuous read data: {repr(read_val.decode('utf-8'))}")
             self.text_intake.configure(state="normal")
             self.text_intake.insert(ctk.END, read_val.decode('utf-8'))
             self.text_intake.configure(state="disabled")
 
     def read(self):
         if not self.check_connection():
+            self.logger.log(LOG_LEVEL.WARNING, "Read attempt failed: no connection")
             self.create_notification(MESSAGE.NO_CONNECTION)
             return
+        self.logger.log(LOG_LEVEL.INFO, "Reading from port")
         if read_val := self.com.read():
+            self.logger.log(LOG_LEVEL.INFO, f"Data received: {repr(read_val.decode('utf-8'))}")
             self.text_intake.configure(state="normal")
             self.text_intake.insert(ctk.END, read_val.decode('utf-8'))
             self.text_intake.configure(state="disabled")
             self.create_notification(MESSAGE.READ_SUCCESS)
         else:
+            self.logger.log(LOG_LEVEL.WARNING, "Read failed: no data received")
             self.create_notification(MESSAGE.READ_FAIL)
 
     def create_notification(self, message: str):
         if self.notifications:
             self.destroy_notifications()
+        if self.pending_notification:
+            self.after_cancel(self.pending_notification)
+            self.pending_notification = None
         self.notifications.append(Notification(self, message, 3, "top"))
 
     def destroy_notifications(self):
@@ -448,7 +512,9 @@ class App(ctk.CTk):
         self.notifications[:] = []
 
     def on_close(self):
+        self.logger.log(LOG_LEVEL.INFO, "Application closing")
         self.com.disconnect()
+        self.logger.log(LOG_LEVEL.INFO, "Disconnected from COM port")
         self.destroy()
 
 if __name__ == "__main__":
