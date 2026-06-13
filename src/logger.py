@@ -1,14 +1,10 @@
 from enum import IntEnum
 from datetime import datetime
+import atexit
 import os
 
 from tools import resource_path
-import atexit
-
-class LOG_LEVEL(IntEnum):
-    INFO = 1
-    WARNING = 2
-    ERROR = 3
+from const import LOG_LEVEL
 
 class Logger:
     def __init__(self, *file: str, level: LOG_LEVEL = LOG_LEVEL.WARNING):

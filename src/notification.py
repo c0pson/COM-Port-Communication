@@ -1,20 +1,10 @@
 import customtkinter as ctk # type: ignore
 from typing import Any
+import pywinstyles          # type: ignore
 
 from enum import StrEnum
 
-import pywinstyles # type: ignore
-
-class MESSAGE(StrEnum):
-    NO_CONNECTION = "No Connection"
-    CONNECTION_ERROR = "Connection Error"
-    CONNECTION_SUCCESS = "Connection Success"
-    WRITE_SUCCESS = "Write Successful"
-    WRITE_FAIL = "Write Failure"
-    READ_SUCCESS = "Read Successful"
-    READ_FAIL = "Read Failure"
-    ERROR_UNKNOWN = "Unknown Error Occurred"
-    PING_INFO = "Make sure that second device is in Listen Mode"
+from const import MESSAGE
 
 class Notification(ctk.CTkFrame):
     def __init__(self, master: Any, message: str, duration_sec: float, position: str='center', font_size: int=21):
