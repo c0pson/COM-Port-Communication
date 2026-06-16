@@ -158,7 +158,7 @@ class Communication(ctk.CTkFrame):
         frame = ctk.CTkFrame(self)
         ctk.CTkLabel(
             master=frame,
-            text="Port settings",
+            text="Port settings    ",
             font=self.font_21
         ).pack(side=ctk.TOP, padx=7, pady=7, anchor=ctk.W)
         # Baudrate settings
@@ -220,7 +220,16 @@ class Communication(ctk.CTkFrame):
         ).pack(padx=7, pady=(0,7), fill="x")
         # Timeout settings
         def validate_timeout_input(new_value):
-            return new_value.isdigit() or new_value == ""
+            if new_value == "":
+                return True
+            parts = new_value.split(".")
+            if len(parts) > 2:
+                return False
+            if not parts[0].isdigit() and parts[0] != "":
+                return False
+            if len(parts) == 2 and not parts[1].isdigit() and parts[1] != "":
+                return False
+            return True
         ctk.CTkLabel(
             master=frame,
             text="Timeout (s)",

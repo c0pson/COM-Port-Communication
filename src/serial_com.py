@@ -18,6 +18,7 @@ class COMPort:
 class COM:
     def __init__(self) -> None:
         self.conn_port = None
+        self._user_timeout: float | None = None
         self._reader_thread: threading.Thread | None = None
         self._reader_active = False
         self._pong_event = threading.Event()
@@ -48,13 +49,14 @@ class COM:
                 inter_byte_timeout=None,
                 exclusive=None
     ):
+        self._user_timeout = timeout
         self.conn_port = serial.Serial(
             port=COMPort.port,
             baudrate=baudrate,
             bytesize=bytesize,
             parity=parity,
             stopbits=stopbits,
-            timeout=timeout,
+            timeout=0.1,
             xonxoff=xonxoff,
             rtscts=rtscts,
             write_timeout=write_timeout,
@@ -84,14 +86,12 @@ class COM:
                 if not self.conn_port or not self.conn_port.is_open:
                     time.sleep(0.05)
                     continue
-                prev_timeout = self.conn_port.timeout
-                self.conn_port.timeout = 0.2
                 line = self.conn_port.readline()
-                self.conn_port.timeout = prev_timeout
                 if not line:
+                    time.sleep(0.05)
                     continue
                 decoded = line.decode('utf-8', errors='ignore').strip()
-                if decoded.startswith("PING:") and len(decoded) == 13:  # "PING:" + 8 hex chars
+                if decoded.startswith("PING:") and len(decoded) == 13:
                     token = decoded[5:]
                     self.conn_port.write(f"PONG:{token}\n".encode('utf-8'))
                 elif decoded.startswith("PONG:") and len(decoded) == 13:
