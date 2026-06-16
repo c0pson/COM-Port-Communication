@@ -4,15 +4,16 @@ import pywinstyles          # type: ignore
 
 from enum import StrEnum
 
-from const import MESSAGE
+from const import COLOR
 
 class Notification(ctk.CTkFrame):
     def __init__(self, master: Any, message: str, duration_sec: float, position: str='center', font_size: int=21):
         super().__init__(
-            master        = master,
-            fg_color      = None,
-            corner_radius = 0,
-            border_color  = None,
+            master        = master.master.master,
+            fg_color      = COLOR.BACKGROUND,
+            bg_color      = COLOR.TRANSPARENT,
+            corner_radius = 7,
+            border_color  = COLOR.TEXT_FADE,
             border_width  = 3,
             width         = 1,
             height        = 1
@@ -49,7 +50,7 @@ class Notification(ctk.CTkFrame):
             return
         if i < 100:
             i += 1
-            pywinstyles.set_opacity(self.winfo_id(), value=(0.01*i), color='#000001')
+            pywinstyles.set_opacity(self.winfo_id(), value=(0.01*i), color=COLOR.TRANSPARENT)
             self.master.after(1, lambda: self.show_animation(i))
         else:
             self.master.after(self.duration, lambda: self.hide_notification(0))

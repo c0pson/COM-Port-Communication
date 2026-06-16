@@ -26,6 +26,8 @@ class COM:
         self._ping_sent_time: float | None = None
         self._expected_token: str = ""
         self.read_queue: queue.Queue[bytes] = queue.Queue()
+        self.modbus_queue: queue.Queue[bytes] = queue.Queue()
+        self._modbus_inter_char_timeout: float = 1.0
 
     def get_all_devices(self) -> list[COMPort]:
         ports: list[COMPort] = []
@@ -72,6 +74,9 @@ class COM:
             self.conn_port.close()
             self.conn_port = None
 
+    def set_modbus_inter_char_timeout(self, timeout: float) -> None:
+        self._modbus_inter_char_timeout = timeout
+
     def _start_reader(self):
         self._reader_active = True
         self._reader_thread = threading.Thread(target=self._reader_loop, daemon=True)
@@ -86,10 +91,14 @@ class COM:
                 if not self.conn_port or not self.conn_port.is_open:
                     time.sleep(0.05)
                     continue
-                line = self.conn_port.readline()
-                if not line:
+                first = self.conn_port.read(1)
+                if not first:
                     time.sleep(0.05)
                     continue
+                if first == b":":
+                    self._read_modbus_frame()
+                    continue
+                line = first + self.conn_port.readline()
                 decoded = line.decode('utf-8', errors='ignore').strip()
                 if decoded.startswith("PING:") and len(decoded) == 13:
                     token = decoded[5:]
@@ -102,6 +111,28 @@ class COM:
                     self.read_queue.put(line)
             except Exception:
                 time.sleep(0.05)
+
+    def _read_modbus_frame(self):
+        frame = bytearray(b":")
+        last_time = time.perf_counter()
+        max_gap = 0.0
+        while self._reader_active:
+            char = self.conn_port.read(1)
+            if not char:
+                if time.perf_counter() - last_time > self._modbus_inter_char_timeout:
+                    return
+                continue
+            now = time.perf_counter()
+            gap = now - last_time
+            if gap > max_gap:
+                max_gap = gap
+            last_time = now
+            frame += char
+            if frame.endswith(b"\r\n"):
+                break
+        if max_gap > self._modbus_inter_char_timeout:
+            return
+        self.modbus_queue.put(bytes(frame))
 
     def write(self, message: str) -> bool:
         if not self.conn_port or not self.conn_port.is_open:
@@ -116,6 +147,12 @@ class COM:
         except queue.Empty:
             pass
         return b"".join(chunks) if chunks else None
+
+    def read_modbus(self) -> bytes | None:
+        try:
+            return self.modbus_queue.get_nowait()
+        except queue.Empty:
+            return None
 
     def ping(self) -> float | ERROR:
         if not self.conn_port or not self.conn_port.is_open:

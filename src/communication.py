@@ -2,16 +2,15 @@ import customtkinter as ctk # type: ignore
 
 import threading
 
-from const import ERROR, LOG_LEVEL, MESSAGE
+from const import ERROR, LOG_LEVEL, MESSAGE, COLOR
 from notification import Notification
-from tools import resource_path
 from serial_com import COM
 from logger import Logger
 from time import sleep
 
 class Communication(ctk.CTkFrame):
     def __init__(self, master, logger) -> None:
-        super().__init__(master)
+        super().__init__(master, fg_color=COLOR.BACKGROUND)
         self.logger: Logger = logger
         self.setup_font()
         self.setup_COM()
@@ -20,11 +19,9 @@ class Communication(ctk.CTkFrame):
         self.logger.log(LOG_LEVEL.INFO, "Application initialized successfully")
 
     def setup_font(self) -> None:
-        font = ctk.FontManager()
-        font.init_font_manager()
-        font.load_font("font\\UbuntuMono-Regular.ttf")
-        self.font_21 = ctk.CTkFont("Ubuntu Mono", 21)
-        self.font_18 = ctk.CTkFont("Ubuntu Mono", 18)
+        self.font_21 = ctk.CTkFont("Ubuntu Mono", 21, weight='bold')
+        self.font_18 = ctk.CTkFont("Ubuntu Mono", 18, weight='bold')
+        self.font_13 = ctk.CTkFont("Ubuntu Mono", 13, weight='bold')
 
     def setup_COM(self) -> None:
         self.com = COM()
@@ -63,49 +60,60 @@ class Communication(ctk.CTkFrame):
         self.notifications: list[Notification] = []
 
     def write_frame(self) -> ctk.CTkFrame:
-        frame = ctk.CTkFrame(self)
-        bottom_frame = ctk.CTkFrame(frame)
+        frame = ctk.CTkFrame(self, fg_color=COLOR.BACKGROUND)
+        bottom_frame = ctk.CTkFrame(frame, fg_color=COLOR.BACKGROUND)
         bottom_frame.pack(side=ctk.BOTTOM, fill=ctk.X, pady=2, padx=2)
         self.text_input = ctk.CTkTextbox(
             master=frame,
-            font=self.font_18
+            font=self.font_18,
+            text_color=COLOR.TEXT_FADE
         )
         self.text_input.pack(side=ctk.TOP, padx=0, pady=0, expand=True, fill=ctk.BOTH)
         self.write_button = ctk.CTkButton(
             master=bottom_frame,
             font=self.font_21,
             text="Write",
-            command=self.write
+            command=self.write,
+            text_color=COLOR.TEXT_MAIN,
+            fg_color=COLOR.ACCENT_2
         )
         self.write_button.pack(side=ctk.LEFT, padx=5, pady=2, anchor=ctk.CENTER, expand=True)
         ctk.CTkButton(
             master=bottom_frame,
             font=self.font_21,
             text="Clear",
-            command=self.clear_input
+            command=self.clear_input,
+            text_color=COLOR.TEXT_MAIN,
+            fg_color=COLOR.ACCENT_2
         ).pack(side=ctk.LEFT, padx=5, pady=2, anchor=ctk.CENTER, expand=True)
         return frame
 
     def read_frame(self) -> ctk.CTkFrame:
-        frame = ctk.CTkFrame(self)
-        bottom_frame = ctk.CTkFrame(frame)
+        frame = ctk.CTkFrame(self, fg_color=COLOR.BACKGROUND)
+        bottom_frame = ctk.CTkFrame(frame, fg_color=COLOR.BACKGROUND)
         bottom_frame.pack(side=ctk.BOTTOM, fill=ctk.X, pady=2, padx=2)
         self.text_intake = ctk.CTkTextbox(
             master=frame,
             state="disabled",
-            font=self.font_18
+            font=self.font_18,
+            text_color=COLOR.TEXT_FADE
         )
         self.read_button = ctk.CTkButton(
             master=bottom_frame,
             font=self.font_21,
             text="Read",
-            command=self.read
+            command=self.read,
+            text_color=COLOR.TEXT_MAIN,
+            fg_color=COLOR.ACCENT_2
         )
         self.continuous_mode_check_button = ctk.CTkCheckBox(
             master=bottom_frame,
             font=self.font_21,
             text="Continuous mode",
-            command=self.toggle_continuous_mode
+            command=self.toggle_continuous_mode,
+            text_color=COLOR.TEXT_MAIN,
+            fg_color=COLOR.ACCENT_2,
+            hover_color=COLOR.ACCENT_2
         )
         self.continuous_mode_check_button.pack(side=ctk.LEFT, padx=5, pady=2, anchor=ctk.CENTER, expand=True)
         self.read_button.pack(side=ctk.LEFT, padx=5, pady=2, anchor=ctk.CENTER)
@@ -114,58 +122,75 @@ class Communication(ctk.CTkFrame):
             master=bottom_frame,
             font=self.font_21,
             text="Clear",
-            command=self.clear_intake
+            command=self.clear_intake,
+            text_color=COLOR.TEXT_MAIN,
+            fg_color=COLOR.ACCENT_2
         ).pack(side=ctk.LEFT, padx=5, pady=2, anchor=ctk.CENTER, expand=True)
         return frame
 
     def top_frame(self) -> ctk.CTkFrame:
-        frame = ctk.CTkFrame(self)
-        ctk.CTkLabel(frame, text="Port: ", font=self.font_21).pack(side=ctk.LEFT, padx=(7, 0))
+        frame = ctk.CTkFrame(self, fg_color=COLOR.ACCENT_1)
+        ctk.CTkLabel(frame, text="Port: ", font=self.font_21, text_color=COLOR.TEXT_MAIN).pack(side=ctk.LEFT, padx=(7, 0))
         longest = max((len(p.name) for p in self.all_devices), default=10)
         self.port_var = ctk.StringVar()
         self.ports_menu = ctk.CTkComboBox(
             master=frame,
             variable=self.port_var,
             values=[p.name for p in self.all_devices],
-            width=longest * 8,
-            state="readonly"
+            width=longest * 9,
+            state="readonly",
+            text_color=COLOR.TEXT_MAIN,
+            border_color=COLOR.ACCENT_2,
+            button_color=COLOR.ACCENT_2,
+            dropdown_text_color=COLOR.TEXT_FADE,
+            dropdown_fg_color=COLOR.BACKGROUND,
+            dropdown_font=self.font_13,
+            font=self.font_13,
+            corner_radius=7
         )
         self.ports_menu.pack(side=ctk.LEFT)
         self.connect_button = ctk.CTkButton(
             master=frame,
             text="Connect",
             command=self.connect,
-            font=self.font_21
+            font=self.font_21,
+            text_color=COLOR.TEXT_MAIN,
+            fg_color=COLOR.ACCENT_2
         )
         self.connect_button.pack(side=ctk.RIGHT, padx=7, pady=7)
         self.ping_button = ctk.CTkButton(
             master=frame,
             text="Ping",
             command=self.ping,
-            font=self.font_21
+            font=self.font_21,
+            text_color=COLOR.TEXT_MAIN,
+            fg_color=COLOR.ACCENT_2
         )
         self.ping_button.pack(side=ctk.RIGHT, padx=7, pady=7)
         self.ping_measurement_label = ctk.CTkLabel(
             master=frame,
             text="Ping: ---ms",
-            font=self.font_21
+            font=self.font_21,
+            text_color=COLOR.TEXT_MAIN
         )
         self.ping_measurement_label.pack(side=ctk.RIGHT, expand=True, padx=10, pady=7)
         return frame
 
     def left_toolbar(self) -> ctk.CTkFrame:
         self.rowconfigure(1, weight=1)
-        frame = ctk.CTkFrame(self)
+        frame = ctk.CTkFrame(self, fg_color=COLOR.ACCENT_1)
         ctk.CTkLabel(
             master=frame,
             text="Port settings    ",
-            font=self.font_21
+            font=self.font_21,
+            text_color=COLOR.TEXT_MAIN
         ).pack(side=ctk.TOP, padx=7, pady=7, anchor=ctk.W)
         # Baudrate settings
         ctk.CTkLabel(
             master=frame,
             text="Baudrate",
-            font=self.font_18
+            font=self.font_18,
+            text_color=COLOR.TEXT_MAIN
         ).pack(anchor="w", padx=7)
         self.baud_var = ctk.StringVar(value="9600")
         ctk.CTkComboBox(
@@ -173,13 +198,16 @@ class Communication(ctk.CTkFrame):
             variable=self.baud_var,
             values=["150","300","600","1200","2400","4800","9600","19200","38400","57600","115200"],
             font=self.font_21,
-            state="readonly"
+            state="readonly",
+            text_color=COLOR.TEXT_FADE,
+            dropdown_text_color=COLOR.TEXT_FADE
         ).pack(padx=7, pady=(0,7), fill="x")
         # Bytesize settings
         ctk.CTkLabel(
             master=frame,
             text="Bytesize",
-            font=self.font_18
+            font=self.font_18,
+            text_color=COLOR.TEXT_MAIN
         ).pack(anchor="w", padx=7)
         self.bytesize_var = ctk.StringVar(value="8")
         ctk.CTkComboBox(
@@ -187,13 +215,16 @@ class Communication(ctk.CTkFrame):
             variable=self.bytesize_var,
             values=["7", "8"],
             font=self.font_21,
-            state="readonly"
+            state="readonly",
+            text_color=COLOR.TEXT_FADE,
+            dropdown_text_color=COLOR.TEXT_FADE
         ).pack(padx=7, pady=(0,7), fill="x")
         # Parity settings
         ctk.CTkLabel(
             master=frame,
             text="Parity",
-            font=self.font_18
+            font=self.font_18,
+            text_color=COLOR.TEXT_MAIN
         ).pack(anchor="w", padx=7)
         self.parity_var = ctk.StringVar(value="N")
         ctk.CTkComboBox(
@@ -201,13 +232,16 @@ class Communication(ctk.CTkFrame):
             variable=self.parity_var,
             values=["N", "E", "O"],
             font=self.font_21,
-            state="readonly"
+            state="readonly",
+            text_color=COLOR.TEXT_FADE,
+            dropdown_text_color=COLOR.TEXT_FADE
         ).pack(padx=7, pady=(0,7), fill="x")
         # Stop bits settings
         ctk.CTkLabel(
             master=frame,
             text="Stop bits",
-            font=self.font_18
+            font=self.font_18,
+            text_color=COLOR.TEXT_MAIN
         ).pack(anchor="w", padx=7)
         self.stopbits_var = ctk.StringVar(value="1")
         ctk.CTkComboBox(
@@ -216,7 +250,9 @@ class Communication(ctk.CTkFrame):
             values=["1", "2"],
             font=self.font_21,
             state="readonly",
-            command=self.update_custom_terminator_input
+            command=self.update_custom_terminator_input,
+            dropdown_text_color=COLOR.TEXT_FADE,
+            text_color=COLOR.TEXT_MAIN
         ).pack(padx=7, pady=(0,7), fill="x")
         # Timeout settings
         def validate_timeout_input(new_value):
@@ -233,7 +269,8 @@ class Communication(ctk.CTkFrame):
         ctk.CTkLabel(
             master=frame,
             text="Timeout (s)",
-            font=self.font_18
+            font=self.font_18,
+            text_color=COLOR.TEXT_MAIN
         ).pack(anchor="w", padx=7)
         self.timeout_var = ctk.StringVar(value="1")
         vcmd_timeout = self.register(validate_timeout_input)
@@ -241,13 +278,16 @@ class Communication(ctk.CTkFrame):
             master=frame,
             textvariable=self.timeout_var,
             validate="key",
-            validatecommand=(vcmd_timeout, "%P")
+            validatecommand=(vcmd_timeout, "%P"),
+            font=self.font_18,
+            text_color=COLOR.TEXT_FADE
         ).pack(padx=7, pady=(0,7), fill="x")
         # Flow settings
         ctk.CTkLabel(
             master=frame,
             text="Flow control",
-            font=self.font_18
+            font=self.font_18,
+            text_color=COLOR.TEXT_MAIN
         ).pack(anchor="w", padx=7)
         self.flow_var = ctk.StringVar(value="None")
         ctk.CTkComboBox(
@@ -255,7 +295,9 @@ class Communication(ctk.CTkFrame):
             variable=self.flow_var,
             values=["None", "XON/XOFF", "RTS/CTS", "DTR/DSR"],
             font=self.font_21,
-            state="readonly"
+            state="readonly",
+            text_color=COLOR.TEXT_FADE,
+            dropdown_text_color=COLOR.TEXT_FADE
         ).pack(padx=7, pady=(0,7), fill="x")
         # terminator settings
         def validate_terminator_input(new_value, keysym):
@@ -266,7 +308,8 @@ class Communication(ctk.CTkFrame):
         ctk.CTkLabel(
             master=frame,
             text="Terminator",
-            font=self.font_18
+            font=self.font_18,
+            text_color=COLOR.TEXT_MAIN
         ).pack(anchor="w", padx=7)
         self.terminator_var = ctk.StringVar(value="None")
         terminator_menu = ctk.CTkComboBox(
@@ -275,22 +318,27 @@ class Communication(ctk.CTkFrame):
             values=["None", "CR", "LF", "CR-LF", "Custom"],
             font=self.font_21,
             state="readonly",
-            command=self.on_terminator_change
+            command=self.on_terminator_change,
+            text_color=COLOR.TEXT_FADE,
+            dropdown_text_color=COLOR.TEXT_FADE,
         )
         terminator_menu.pack(padx=7, pady=(0,7), fill="x")
         # Custom Terminator Input
-        self.custom_terminator_frame = ctk.CTkFrame(frame)
+        self.custom_terminator_frame = ctk.CTkFrame(frame, fg_color=COLOR.ACCENT_1)
         ctk.CTkLabel(
             master=self.custom_terminator_frame,
             text="Custom terminator",
-            font=self.font_18
+            font=self.font_18,
+            text_color=COLOR.TEXT_MAIN
         ).pack(anchor="w", padx=7)
         self.custom_terminator_var = ctk.StringVar(value="")
         self.custom_terminator_input = ctk.CTkEntry(
             master=self.custom_terminator_frame,
             textvariable=self.custom_terminator_var,
             validate="key",
-            validatecommand=(vcmd_terminator, "%P", "%K")
+            validatecommand=(vcmd_terminator, "%P", "%K"),
+            font=self.font_18,
+            text_color=COLOR.TEXT_FADE
         )
         self.custom_terminator_input.pack(padx=7, pady=(0,7), fill="x")
         return frame
@@ -309,12 +357,12 @@ class Communication(ctk.CTkFrame):
         port = next((p for p in self.all_devices if p.name == self.port_var.get()), None)
         if not port:
             self.create_notification(MESSAGE.NO_CONNECTION)
-            return False
-        return True, port
+            return None
+        return port
 
     def on_terminator_change(self, value: str):
         if self.terminator_var.get() == "Custom":
-            self.custom_terminator_frame.pack(padx=7, pady=(0,7), fill="x")
+            self.custom_terminator_frame.pack(padx=(0, 2), pady=(0,7), fill="x")
         else:
             self.custom_terminator_frame.pack_forget()
 
@@ -337,13 +385,13 @@ class Communication(ctk.CTkFrame):
             self.com.disconnect()
             self.connected = False
             self.connect_button.configure(text="Connect")
-            self.master.title()
+            self.master.master.master.title("COM Port Communication - Disconnected")
             self.create_notification(MESSAGE.DISCONNECTION)
             return
-        if not (connection := self.check_connection()):
+        port = self.check_connection()
+        if not port:
             self.logger.log(LOG_LEVEL.WARNING, "Connection attempt failed: no valid port selected")
             return
-        port = connection[1]
         flow_control = self.flow_var.get()
         xonxoff = flow_control == "XON/XOFF"
         rtscts = flow_control == "RTS/CTS"
@@ -363,12 +411,13 @@ class Communication(ctk.CTkFrame):
             )
             self.connected = True
             self.connect_button.configure(text="Disconnect")
+            conn_name = self.com.conn_port.name if self.com.conn_port else "Disconnected"
+            self.master.master.master.title(f"COM Port Communication - {conn_name}")
             self.logger.log(LOG_LEVEL.INFO, f"Successfully connected to {port.name}")
             self.create_notification(MESSAGE.CONNECTION_SUCCESS)
         except Exception as e:
             self.logger.log(LOG_LEVEL.ERROR, f"Connection error: {str(e)}")
             self.create_notification(MESSAGE.ERROR_UNKNOWN)
-            print(e)
 
     def ping(self):
         self.logger.log(LOG_LEVEL.INFO, "Ping initiated")
@@ -385,7 +434,7 @@ class Communication(ctk.CTkFrame):
                     self.logger.log(LOG_LEVEL.WARNING, "Ping failed: connection error")
                     self.create_notification(MESSAGE.CONNECTION_ERROR)
                 case ERROR.CONNECTION_TIMEOUT:
-                    self.logger.log(LOG_LEVEL.WARNING, "Ping failed: connection error")
+                    self.logger.log(LOG_LEVEL.WARNING, "Ping failed: connection timeout")
                     self.create_notification(MESSAGE.CONNECTION_TIMEOUT)
                 case _:
                     self.logger.log(LOG_LEVEL.INFO, f"Ping: {result:.2f}ms")
@@ -394,14 +443,6 @@ class Communication(ctk.CTkFrame):
 
     def _update_ping_label(self, ping_ms: float):
         self.ping_measurement_label.configure(text=f"Ping: {ping_ms:.2f}ms")
-
-    def _stop_ping_mode(self):
-        self.toggle_ping_button.deselect()
-        self.ping_mode = False
-        self.ping_measurement_label.configure(text="Ping: ---ms")
-        self.ping_button.configure(state="normal")
-        self.write_button.configure(state="normal")
-        self.read_button.configure(state="normal")
 
     def write(self):
         if not self.check_connection():
@@ -448,7 +489,6 @@ class Communication(ctk.CTkFrame):
                 self.just_read()
             except Exception as e:
                 self.logger.log(LOG_LEVEL.ERROR, f"Continuous mode error: {str(e)}")
-                print(e)
             self.after(21, self.start_continuous_mode)
 
     def just_read(self):
