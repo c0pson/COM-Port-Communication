@@ -258,7 +258,7 @@ class Communication(ctk.CTkFrame):
             state="readonly",
             command=self.update_custom_terminator_input,
             dropdown_text_color=COLOR.TEXT_FADE,
-            text_color=COLOR.TEXT_MAIN
+            text_color=COLOR.TEXT_FADE
         ).pack(padx=7, pady=(0,7), fill="x")
         # Timeout settings
         def validate_timeout_input(new_value):
@@ -309,7 +309,8 @@ class Communication(ctk.CTkFrame):
         def validate_terminator_input(new_value, keysym):
             if keysym == "BackSpace":
                 self.last_removed_stop_bit = None
-            return len(new_value) <= int(self.stopbits_var.get())
+            escaped = new_value.replace("\\n", "_").replace("\\r", "_").replace("\\t", "_")
+            return len(escaped) <= int(self.stopbits_var.get())
         vcmd_terminator = self.register(validate_terminator_input)
         ctk.CTkLabel(
             master=frame,
@@ -383,7 +384,8 @@ class Communication(ctk.CTkFrame):
         elif terminator_type == "CR-LF":
             return "\r\n"
         elif terminator_type == "Custom":
-            return self.custom_terminator_var.get()
+            raw = self.custom_terminator_var.get()
+            return raw.replace("\\n", "\n").replace("\\r", "\r").replace("\\t", "\t")
         return ""
 
     def connect(self) -> None:

@@ -157,7 +157,6 @@ class COM:
     def ping(self) -> float | ERROR:
         if not self.conn_port or not self.conn_port.is_open:
             return ERROR.NO_CONNECTION
-        print("Pinging")
         self._pong_event.clear()
         self._pong_time = None
         self._expected_token = self._make_ping_token()
