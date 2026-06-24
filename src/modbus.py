@@ -93,8 +93,8 @@ class ModbusUI(ctk.CTkFrame):
         ctk.CTkButton(
             master=frame,
             font=self.font_21,
-            text="Clear Log",
-            command=self.clear_log,
+            text="Clear",
+            command=self.clear_intake,
             text_color=COLOR.TEXT_MAIN,
             fg_color=COLOR.ACCENT_2
         ).pack(side=ctk.TOP, padx=5, pady=5, anchor=ctk.CENTER)
@@ -108,11 +108,11 @@ class ModbusUI(ctk.CTkFrame):
         ctk.CTkButton(
             master=frame,
             font=self.font_21,
-            text="Clear",
-            command=self.clear_intake,
+            text="Clear Log",
+            command=self.clear_log,
             text_color=COLOR.TEXT_MAIN,
             fg_color=COLOR.ACCENT_2
-        ).pack(side=ctk.LEFT, padx=5, pady=5, anchor=ctk.CENTER, expand=True)
+        ).pack(side=ctk.TOP, padx=5, pady=5, anchor=ctk.CENTER)
         return frame
 
     def top_frame(self) -> ctk.CTkFrame:
