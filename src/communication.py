@@ -75,17 +75,19 @@ class Communication(ctk.CTkFrame):
             text="Write",
             command=self.write,
             text_color=COLOR.TEXT_MAIN,
-            fg_color=COLOR.ACCENT_2
+            fg_color=COLOR.ACCENT_2,
+            hover_color=COLOR.BUTTON_HOVER
         )
-        self.write_button.pack(side=ctk.LEFT, padx=5, pady=2, anchor=ctk.CENTER, expand=True)
+        self.write_button.pack(side=ctk.LEFT, padx=5, pady=5, anchor=ctk.CENTER, expand=True)
         ctk.CTkButton(
             master=bottom_frame,
             font=self.font_21,
             text="Clear",
             command=self.clear_input,
             text_color=COLOR.TEXT_MAIN,
-            fg_color=COLOR.ACCENT_2
-        ).pack(side=ctk.LEFT, padx=5, pady=2, anchor=ctk.CENTER, expand=True)
+            fg_color=COLOR.ACCENT_2,
+            hover_color=COLOR.BUTTON_HOVER
+        ).pack(side=ctk.LEFT, padx=5, pady=5, anchor=ctk.CENTER, expand=True)
         return frame
 
     def read_frame(self) -> ctk.CTkFrame:
@@ -104,7 +106,8 @@ class Communication(ctk.CTkFrame):
             text="Read",
             command=self.read,
             text_color=COLOR.TEXT_MAIN,
-            fg_color=COLOR.ACCENT_2
+            fg_color=COLOR.ACCENT_2,
+            hover_color=COLOR.BUTTON_HOVER
         )
         self.continuous_mode_check_button = ctk.CTkCheckBox(
             master=bottom_frame,
@@ -113,10 +116,10 @@ class Communication(ctk.CTkFrame):
             command=self.toggle_continuous_mode,
             text_color=COLOR.TEXT_MAIN,
             fg_color=COLOR.ACCENT_2,
-            hover_color=COLOR.ACCENT_2
+            hover_color=COLOR.ACCENT_2,
         )
         self.continuous_mode_check_button.pack(side=ctk.LEFT, padx=5, pady=2, anchor=ctk.CENTER, expand=True)
-        self.read_button.pack(side=ctk.LEFT, padx=5, pady=2, anchor=ctk.CENTER)
+        self.read_button.pack(side=ctk.LEFT, padx=5, pady=5, anchor=ctk.CENTER)
         self.text_intake.pack(side=ctk.TOP, padx=0, pady=0, expand=True, fill=ctk.BOTH)
         ctk.CTkButton(
             master=bottom_frame,
@@ -124,8 +127,9 @@ class Communication(ctk.CTkFrame):
             text="Clear",
             command=self.clear_intake,
             text_color=COLOR.TEXT_MAIN,
-            fg_color=COLOR.ACCENT_2
-        ).pack(side=ctk.LEFT, padx=5, pady=2, anchor=ctk.CENTER, expand=True)
+            fg_color=COLOR.ACCENT_2,
+            hover_color=COLOR.BUTTON_HOVER
+        ).pack(side=ctk.LEFT, padx=5, pady=5, anchor=ctk.CENTER, expand=True)
         return frame
 
     def top_frame(self) -> ctk.CTkFrame:
@@ -155,7 +159,8 @@ class Communication(ctk.CTkFrame):
             command=self.connect,
             font=self.font_21,
             text_color=COLOR.TEXT_MAIN,
-            fg_color=COLOR.ACCENT_2
+            fg_color=COLOR.ACCENT_2,
+            hover_color=COLOR.BUTTON_HOVER
         )
         self.connect_button.pack(side=ctk.RIGHT, padx=7, pady=7)
         self.ping_button = ctk.CTkButton(
@@ -164,7 +169,8 @@ class Communication(ctk.CTkFrame):
             command=self.ping,
             font=self.font_21,
             text_color=COLOR.TEXT_MAIN,
-            fg_color=COLOR.ACCENT_2
+            fg_color=COLOR.ACCENT_2,
+            hover_color=COLOR.BUTTON_HOVER
         )
         self.ping_button.pack(side=ctk.RIGHT, padx=7, pady=7)
         self.ping_measurement_label = ctk.CTkLabel(

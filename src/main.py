@@ -27,7 +27,7 @@ class App(ctk.CTk):
         self.modbus_task.pack(side=ctk.TOP, padx=0, pady=0, fill=ctk.BOTH, expand=True)
 
     def setup_tabs(self) -> None:
-        self.tab_view = ctk.CTkTabview(self, fg_color=COLOR.BACKGROUND)
+        self.tab_view = ctk.CTkTabview(self, fg_color=COLOR.BACKGROUND, anchor=ctk.NW)
         self.tab_view._segmented_button.configure(
             font=self.font_21,
             fg_color=COLOR.ACCENT_1,
@@ -35,7 +35,7 @@ class App(ctk.CTk):
             selected_hover_color=COLOR.ACCENT_2,
             unselected_color=COLOR.ACCENT_1,
             unselected_hover_color=COLOR.ACCENT_2,
-            text_color=COLOR.TEXT_MAIN,
+            text_color=COLOR.TEXT_MAIN
         )
         self.tab_view.add("Communication")
         self.tab_view.add("ModBus")
@@ -51,6 +51,5 @@ class App(ctk.CTk):
         self.destroy()
 
 if __name__ == "__main__":
-    ctk.deactivate_automatic_dpi_awareness()
     app = App()
     app.mainloop()

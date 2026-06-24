@@ -59,27 +59,30 @@ class ModbusUI(ctk.CTkFrame):
             text="Send Text",
             command=self.send_text,
             text_color=COLOR.TEXT_MAIN,
-            fg_color=COLOR.ACCENT_2
+            fg_color=COLOR.ACCENT_2,
+            hover_color=COLOR.BUTTON_HOVER
         )
-        self.send_text_button.pack(side=ctk.LEFT, padx=5, pady=2, anchor=ctk.CENTER, expand=True)
+        self.send_text_button.pack(side=ctk.LEFT, padx=5, pady=5, anchor=ctk.CENTER, expand=True)
         self.read_text_button = ctk.CTkButton(
             master=bottom_frame,
             font=self.font_21,
             text="Read Text",
             command=self.request_text,
             text_color=COLOR.TEXT_MAIN,
-            fg_color=COLOR.ACCENT_2
+            fg_color=COLOR.ACCENT_2,
+            hover_color=COLOR.BUTTON_HOVER
         )
-        self.read_text_button.pack(side=ctk.LEFT, padx=5, pady=2, anchor=ctk.CENTER, expand=True)
+        self.read_text_button.pack(side=ctk.LEFT, padx=5, pady=5, anchor=ctk.CENTER, expand=True)
         self.input_clear_button = ctk.CTkButton(
             master=bottom_frame,
             font=self.font_21,
             text="Clear",
             command=self.clear_input,
             text_color=COLOR.TEXT_MAIN,
-            fg_color=COLOR.ACCENT_2
+            fg_color=COLOR.ACCENT_2,
+            hover_color=COLOR.BUTTON_HOVER
         )
-        self.input_clear_button.pack(side=ctk.LEFT, padx=5, pady=2, anchor=ctk.CENTER, expand=True)
+        self.input_clear_button.pack(side=ctk.LEFT, padx=5, pady=5, anchor=ctk.CENTER, expand=True)
         return frame
 
     def read_frame(self) -> ctk.CTkFrame:
@@ -96,7 +99,8 @@ class ModbusUI(ctk.CTkFrame):
             text="Clear",
             command=self.clear_intake,
             text_color=COLOR.TEXT_MAIN,
-            fg_color=COLOR.ACCENT_2
+            fg_color=COLOR.ACCENT_2,
+            hover_color=COLOR.BUTTON_HOVER
         ).pack(side=ctk.TOP, padx=5, pady=5, anchor=ctk.CENTER)
         self.frame_log = ctk.CTkTextbox(
             master=frame,
@@ -111,7 +115,8 @@ class ModbusUI(ctk.CTkFrame):
             text="Clear Log",
             command=self.clear_log,
             text_color=COLOR.TEXT_MAIN,
-            fg_color=COLOR.ACCENT_2
+            fg_color=COLOR.ACCENT_2,
+            hover_color=COLOR.BUTTON_HOVER
         ).pack(side=ctk.TOP, padx=5, pady=5, anchor=ctk.CENTER)
         return frame
 
@@ -139,7 +144,8 @@ class ModbusUI(ctk.CTkFrame):
             command=self.toggle_slave,
             font=self.font_21,
             text_color=COLOR.TEXT_MAIN,
-            fg_color=COLOR.ACCENT_2
+            fg_color=COLOR.ACCENT_2,
+            hover_color=COLOR.BUTTON_HOVER
         )
         return frame
 

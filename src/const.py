@@ -74,9 +74,10 @@ class MODBUS_MESSAGE(StrEnum):
     TEXT_READ = "Text Read From Slave"
 
 class COLOR(StrEnum):
-    BACKGROUND =  "#2d2926"
-    ACCENT_1 =    "#7c878e"
-    ACCENT_2 =    "#003da5"
-    TEXT_MAIN =   "#f1be48"
-    TEXT_FADE =   "#efbe7d"
-    TRANSPARENT = "#000001"
+    BACKGROUND   = "#0D0F12"
+    ACCENT_1     = "#1C1F24"
+    ACCENT_2     = "#D6A700"
+    BUTTON_HOVER = "#D19400"
+    TEXT_MAIN    = "#EAEAEA"
+    TEXT_FADE    = "#7A7F87"
+    TRANSPARENT  = "#000001"
